@@ -1,0 +1,39 @@
+# GitHub Appを使用してtemp-repoBに変更通知を送信
+name: Notify Docs Changes to Repository B (GitHub App版)
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+
+jobs:
+  notify-repo-b:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: temp-repoB  # Bリポジトリ名
+
+      - name: Trigger Repository B Workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: kei-creative-life/temp-repoB
+          event-type: docs-updated
+          client-payload: |
+            {
+              "repository": "${{ github.repository }}",
+              "commit_sha": "${{ github.event.pull_request.merge_commit_sha }}",
+              "pr_number": "${{ github.event.pull_request.number }}",
+              "pr_title": "${{ github.event.pull_request.title }}",
+              "updated_files": "${{ github.event.pull_request.changed_files }}"
+            } 
